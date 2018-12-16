@@ -1,0 +1,120 @@
+---
+title: "Laba4"
+author: "Daria Tomina"
+date: "December 11, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Пользуясь примером из лекции файл (5.0.R) проанализируйте данные
+#о возрасте и физ. характеристиках молюсков
+#https://archive.ics.uci.edu/ml/datasets/abalone
+```{r}
+data <- read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data", header=TRUE, sep=",")
+summary(data)
+colnames(data)
+colnames(data) <- c("sex", "length", "diameter", "height", 
+                    "whole_weight", "shucked_weight",
+                    "viscera_weight", "shell_weight", "rings")
+
+colnames(data)
+data$sex <- factor(c("Female", "Infant", "Male")[data$sex])
+par(mfrow=c(1,3)) 
+hist(data$diameter, main = "Диаметр, мм")
+hist(data$height, main = "Высота, мм")
+hist(data$whole_weight, main = "Полный вес, гр")
+```
+
+#Видим ассиметрию https://en.wikipedia.org/wiki/Skewness
+#и выбросы (от них нужно избавиться)
+
+#Визулизируем возможные зависимости
+```{r}
+par(mfrow=c(1,2)) 
+plot(data$diameter, data$whole_weight,'p',main = "Зависимость веса от диаметра")
+plot(data$height, data$whole_weight,'p',main = "Зависимость веса от высоты")
+```
+
+#Хорошо видна зависимость, нужно её исследовать
+#построить линейные модели при помощи функции lm, посмотреть их характеристики
+```{r}
+lm1 <- lm(data$diameter ~ data$whole_weight)
+summary(lm1)
+plot(lm1)
+
+lm2 <- lm(data$height ~ data$whole_weight)
+summary(lm2)
+plot(lm2)
+```
+
+#избавиться от выборосов, построить ещё модели и проверить их
+```{r}
+library(dplyr)
+data <- filter(data, diameter > 0.25, diameter < 0.52)
+data <- filter(data, height > 0.08, height < 0.18)
+data <- filter(data, whole_weight > 0.2, whole_weight < 1.4)
+
+par(mfrow=c(1,3)) 
+hist(data$diameter, main = "Диаметр, мм")
+hist(data$height, main = "Высота, мм")
+hist(data$whole_weight, main = "Полный вес, гр")
+```
+
+```{r}
+lm1 <- lm(data$diameter ~ data$whole_weight)
+summary(lm1)
+plot(lm1)
+```
+
+```{r}
+lm2 <- lm(data$height ~ data$whole_weight)
+summary(lm2)
+plot(lm2)
+```
+
+#разделить массив данных на 2 случайные части
+```{r}
+odds <- seq(1, nrow(data), by=2)
+data.in <- data[odds,]
+data.out <- data[-odds,]
+```
+
+#подогнать модель по первой части
+```{r}
+lm1 <- lm(diameter ~ whole_weight, data=data.in)
+summary(lm1)
+```
+
+```{r}
+lm2 <- lm(height ~ whole_weight, data=data.in)
+summary(lm2)
+```
+
+#спрогнозировать (функция predict) значения во второй части
+```{r}
+predict1 <- predict(lm1)
+predict2 <- predict(lm2)
+```
+
+#проверить качесвто прогноза
+```{r}
+cor1.in <- cor(data.in$whole_weight, predict1)
+plot(data.in$whole_weight, predict1)
+
+cor1.out <- cor(data.out$whole_weight, predict1)
+plot(data.out$whole_weight, predict1)
+```
+Модель получилась плохая, коэффициент корреляции `r cor1.out`
+
+```{r}
+cor2.in <- cor(data.in$whole_weight, predict2)
+plot(data.in$whole_weight, predict2)
+
+cor2.out <- cor(data.out$whole_weight, predict2)
+plot(data.out$whole_weight, predict2)
+```
+Модель также получилась плохая, коэффициент корреляции `r cor2.out`
+
